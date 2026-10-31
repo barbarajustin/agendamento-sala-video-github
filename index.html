@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Agendamento da Sala de Vídeo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="login" hidden>
+  <div class="card">
+    <h1>🎥 Agendamento da Sala de Vídeo</h1>
+    <p>Entre com sua conta Google para agendar a sala.</p>
+    <button class="gbtn" id="btnGoogle" type="button">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+    <div class="msg err" id="loginMsg" role="alert"></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <h1>🎥 Agendamento da Sala de Vídeo</h1>
+    <div class="who">
+      <button class="pill" id="themeToggle" type="button">🌙 Tema escuro</button>
+      <img id="foto" alt="" referrerpolicy="no-referrer" hidden>
+      <span id="nome"></span><span class="badge" id="papel"></span>
+      <button class="pill" id="btnSair" type="button">Sair</button>
+    </div>
+  </header>
+  <div class="layout">
+    <div class="card form-col" id="f">
+      <h3 style="margin-top:0">Agendamento</h3>
+      <div class="edit-flag" id="editFlag" hidden>✏️ Editando agendamento existente</div>
+      <label for="professor">Nome do professor(a)</label><input id="professor" maxlength="60" placeholder="Ex: Maria Silva" autocomplete="off">
+      <label for="disciplina">Disciplina</label><input id="disciplina" maxlength="50" placeholder="Ex: Ciências" autocomplete="off">
+      <label for="turma">Turma</label><input id="turma" maxlength="20" placeholder="Ex: 7º Ano B" autocomplete="off">
+      <label for="data">Data</label><input id="data" type="date">
+      <label for="turno">Turno</label>
+      <select id="turno"><option value="manha">Manhã (07h - 12h)</option><option value="tarde">Tarde (13h15 - 17h15)</option><option value="noite">Noite (19h - 22h40)</option></select>
+      <label for="horario">Horário</label><select id="horario"></select>
+      <div class="btn-row">
+        <button class="btn-primary" id="btnSalvar" type="button">Agendar Sala</button>
+        <button class="btn-secondary" id="btnCancelar" type="button" hidden>Cancelar</button>
+      </div>
+      <div class="msg" id="msg" role="status"></div>
+    </div>
+    <div class="card cal-col">
+      <div class="cal-nav">
+        <button id="prevMonth" type="button" aria-label="Mês anterior">‹</button>
+        <h2 id="monthLabel" aria-live="polite"></h2>
+        <button id="nextMonth" type="button" aria-label="Próximo mês">›</button>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--manha-bg)"></i> Manhã</span><span><i style="background:var(--tarde-bg)"></i> Tarde</span><span><i style="background:var(--noite-bg)"></i> Noite</span>
+      </div>
+      <div class="wrap-x"><table>
+        <thead><tr><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th><th class="weekend">Sábado</th><th class="weekend">Domingo</th></tr></thead>
+        <tbody id="calBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<div id="confirmBox" hidden role="alertdialog" aria-modal="true" aria-labelledby="confirmTxt">
+  <div class="card" style="max-width:380px;width:100%">
+    <h3 style="margin-top:0">Excluir agendamento?</h3>
+    <p id="confirmTxt" style="margin:0;font-size:.9rem"></p>
+    <div class="btn-row">
+      <button class="btn-primary" id="confirmSim" type="button" style="background:var(--danger)">Excluir</button>
+      <button class="btn-secondary" id="confirmNao" type="button">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

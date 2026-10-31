@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signed() { return request.auth != null; }
+    function isAdmin() {
+      return signed() &&
+        get(/databases/$(db)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function valid(d) {
+      return d.keys().hasAll(['professor','disciplina','turma','data','turno','horario','ownerUid'])
+        && d.professor is string && d.professor.size() > 0 && d.professor.size() <= 60
+        && d.disciplina is string && d.disciplina.size() > 0 && d.disciplina.size() <= 50
+        && d.turma is string && d.turma.size() > 0 && d.turma.size() <= 20
+        && d.data is string && d.data.size() == 10
+        && d.turno in ['manha','tarde','noite']
+        && d.horario is string && d.horario.size() <= 15;
+    }
+
+    match /users/{uid} {
+      allow read: if signed() && (request.auth.uid == uid || isAdmin());
+      // Todo novo usuário nasce como "user". Só o admin altera papéis.
+      allow create: if signed() && request.auth.uid == uid
+                    && request.resource.data.role == 'user'
+                    && request.resource.data.keys().hasOnly(['role','email','nome']);
+      allow update, delete: if isAdmin();
+    }
+
+    match /agendamentos/{id} {
+      allow read: if signed();
+      allow create: if signed() && valid(request.resource.data)
+                    && request.resource.data.ownerUid == request.auth.uid;
+      // Usuário edita só o que criou; admin edita tudo.
+      allow update: if signed() && valid(request.resource.data)
+                    && request.resource.data.ownerUid == resource.data.ownerUid
+                    && (resource.data.ownerUid == request.auth.uid || isAdmin());
+      // Somente admin exclui.
+      allow delete: if isAdmin();
+    }
+  }
+}
