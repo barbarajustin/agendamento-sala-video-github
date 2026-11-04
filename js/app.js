@@ -95,6 +95,7 @@ async function salvar(){
       msg('Sala agendada com sucesso.', true);
     }
     view = new Date(y, m-1, 1); reset(); render();
+    if (matchMedia('(max-width:900px)').matches) document.querySelector('.cal-col').scrollIntoView({ behavior:'smooth', block:'start' });
   } catch (e) { msg(erroFb(e)); }
 }
 
