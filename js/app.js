@@ -27,7 +27,7 @@ let user = null, role = 'user', lista = [], editId = null, unsub = null, view = 
 view.setDate(1);
 
 const isAdmin = () => role === 'admin';
-const canEdit = r => isAdmin() || r.ownerUid === user.uid;
+const canEdit = () => isAdmin();
 function msg(t, ok){ const m=$('msg'); m.textContent=t||''; m.className='msg '+(t?(ok?'ok':'err'):''); }
 const erroFb = e => e.code === 'permission-denied' ? 'Sem permissão para esta ação.' : 'Erro: ' + (e.message || e.code);
 
@@ -52,6 +52,8 @@ onAuthStateChanged(auth, async u => {
     $('papel').className = 'badge' + (isAdmin() ? ' admin' : '');
     $('foto').hidden = !u.photoURL; if (u.photoURL) $('foto').src = u.photoURL;
     $('login').hidden = true; $('app').hidden = false;
+    $('f').hidden = !isAdmin(); $('avisoLeitura').hidden = isAdmin();
+    document.body.classList.toggle('somente-leitura', !isAdmin());
     reset();
     unsub = onSnapshot(collection(db, 'agendamentos'),
       s => { lista = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
@@ -77,6 +79,7 @@ function reset(){
 }
 
 async function salvar(){
+  if (!isAdmin()) return msg('Somente administradores podem agendar ou editar.');
   const r = { professor:$('professor').value.trim(), disciplina:$('disciplina').value.trim(), turma:$('turma').value.trim(),
     data:$('data').value, turno:$('turno').value, horario:$('horario').value };
   if (Object.values(r).some(v => !v)) return msg('Preencha todos os campos.');
@@ -162,7 +165,7 @@ $('calBody').addEventListener('click', e => {
   const ed = e.target.closest('[data-edit]'); if (ed) return editar(ed.dataset.edit);
   const td = e.target.closest('td');
   if (td && td.classList.contains('weekend')) return msg('Sábado e domingo não podem ser agendados.');
-  if (td && td.dataset.d) { $('data').value = td.dataset.d; $('professor').focus(); }
+  if (td && td.dataset.d && isAdmin()) { $('data').value = td.dataset.d; $('professor').focus(); }
 });
 
 /* ---------- Tema ---------- */
