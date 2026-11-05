@@ -72,3 +72,7 @@ td.today .daynum{background:var(--accent);color:#fff}
   table{min-width:640px}
   td{height:96px}
 }
+
+/* Usuário comum: somente visualização */
+.aviso{background:var(--weekday-bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.82rem;margin-bottom:12px}
+.somente-leitura td{cursor:default}
