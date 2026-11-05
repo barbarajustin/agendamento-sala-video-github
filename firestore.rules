@@ -26,14 +26,13 @@ service cloud.firestore {
     }
 
     match /agendamentos/{id} {
+      // Qualquer usuário logado visualiza.
       allow read: if signed();
-      allow create: if signed() && valid(request.resource.data)
+      // Somente administradores criam, editam e excluem.
+      allow create: if isAdmin() && valid(request.resource.data)
                     && request.resource.data.ownerUid == request.auth.uid;
-      // Usuário edita só o que criou; admin edita tudo.
-      allow update: if signed() && valid(request.resource.data)
-                    && request.resource.data.ownerUid == resource.data.ownerUid
-                    && (resource.data.ownerUid == request.auth.uid || isAdmin());
-      // Somente admin exclui.
+      allow update: if isAdmin() && valid(request.resource.data)
+                    && request.resource.data.ownerUid == resource.data.ownerUid;
       allow delete: if isAdmin();
     }
   }
