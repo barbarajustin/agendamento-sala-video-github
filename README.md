@@ -6,8 +6,9 @@ Aplicação web (HTML5, CSS3 e JavaScript) para agendar a sala de vídeo da esco
 
 | Ação | Usuário | Administrador |
 |---|---|---|
-| Agendar | sim | sim |
-| Editar | só os próprios | todos |
+| Visualizar a planilha | sim | sim |
+| Agendar | não | sim |
+| Editar | não | sim |
 | Excluir | não | sim |
 
 Sábado e domingo não podem ser agendados.
