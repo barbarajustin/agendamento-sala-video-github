@@ -38,10 +38,10 @@ td.weekend{background:repeating-linear-gradient(135deg,rgba(100,116,139,.10) 0 6
 td.today{background:var(--today)}
 .daynum{font-weight:600;font-size:.75rem;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;margin-bottom:4px}
 td.today .daynum{background:var(--accent);color:#fff}
-.agenda-item{background:var(--accent);color:#fff;border-radius:4px;padding:3px 44px 3px 4px;margin-bottom:3px;position:relative;line-height:1.25}
+.agenda-item{background:var(--accent);color:#fff;border-radius:4px;padding:3px 4px;margin-bottom:3px;line-height:1.25}
 .agenda-item.can-edit{cursor:pointer}
 .agenda-item b{display:block}
-.agenda-item .actions{position:absolute;top:1px;right:2px;display:flex;gap:2px}
+.agenda-item .actions{display:flex;gap:2px;justify-content:flex-end;margin-top:2px}
 .agenda-item .actions button{background:transparent;font-size:.75rem;padding:2px 4px;color:inherit}
 .turno-manha{background:var(--manha-bg)!important;color:var(--manha-fg)}
 .turno-tarde{background:var(--tarde-bg)!important;color:var(--tarde-fg)}
@@ -76,3 +76,12 @@ td.today .daynum{background:var(--accent);color:#fff}
 /* Usuário comum: somente visualização */
 .aviso{background:var(--weekday-bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.82rem;margin-bottom:12px}
 .somente-leitura td{cursor:default}
+
+/* Aviso de retorno (Google Agenda) */
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;max-width:92vw;padding:10px 16px;border-radius:8px;font-size:.85rem;font-weight:600;color:#fff;background:var(--danger);box-shadow:0 4px 14px rgba(0,0,0,.3)}
+#toast.ok{background:#16a34a}
+
+/* Dias que já passaram: não aceitam novo agendamento */
+td.past .daynum{text-decoration:line-through}
+td.past:not(.weekend){cursor:not-allowed}
+.somente-leitura td.past{cursor:default}
