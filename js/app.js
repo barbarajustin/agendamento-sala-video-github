@@ -23,10 +23,12 @@ if (firebaseConfig.apiKey.startsWith('COLE')) {
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp), db = getFirestore(fbApp);
+let gToken = null;
 let user = null, role = 'user', lista = [], editId = null, unsub = null, view = new Date();
 view.setDate(1);
 
 const isAdmin = () => role === 'admin';
+const hojeISO = () => iso(new Date());
 const canEdit = () => isAdmin();
 function msg(t, ok){ const m=$('msg'); m.textContent=t||''; m.className='msg '+(t?(ok?'ok':'err'):''); }
 const erroFb = e => e.code === 'permission-denied' ? 'Sem permissão para esta ação.' : 'Erro: ' + (e.message || e.code);
@@ -41,7 +43,7 @@ $('btnSair').onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, async u => {
   if (unsub) { unsub(); unsub = null; }
-  if (!u) { user = null; lista = []; $('app').hidden = true; $('login').hidden = false; return; }
+  if (!u) { gToken = null; user = null; lista = []; $('app').hidden = true; $('login').hidden = false; return; }
   try {
     user = u;
     const ref = doc(db, 'users', u.uid), snap = await getDoc(ref);
@@ -73,6 +75,7 @@ function reset(){
   editId = null;
   ['disciplina','turma','data'].forEach(i => $(i).value = '');
   $('professor').value = user ? (user.displayName || '') : '';
+  $('data').min = hojeISO();
   $('turno').value = 'manha'; populate('manha');
   $('editFlag').hidden = true; $('btnCancelar').hidden = true;
   $('btnSalvar').textContent = 'Agendar Sala';
@@ -85,6 +88,8 @@ async function salvar(){
   if (Object.values(r).some(v => !v)) return msg('Preencha todos os campos.');
   const [y,m,d] = r.data.split('-').map(Number), dow = new Date(y,m-1,d).getDay();
   if (dow === 0 || dow === 6) return msg('Sábado e domingo não podem ser agendados.');
+  const orig = editId ? lista.find(x => x.id === editId) : null;
+  if (r.data < hojeISO() && !(orig && orig.data === r.data)) return msg('Não é possível agendar em dias que já passaram.');
   const c = lista.find(x => x.data === r.data && x.horario === r.horario && x.id !== editId);
   if (c) return msg(`Horário ocupado: ${c.professor} (${c.turma}) já reservou a sala neste horário.`);
   try {
@@ -130,8 +135,57 @@ $('btnCancelar').onclick = () => { reset(); msg(''); };
 $('f').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') salvar(); });
 $('data').onchange = function(){
   const p = this.value.split('-').map(Number), w = p.length === 3 ? new Date(p[0],p[1]-1,p[2]).getDay() : 1;
-  msg(w === 0 || w === 6 ? 'Sábado e domingo não podem ser agendados.' : '');
+  msg(w === 0 || w === 6 ? 'Sábado e domingo não podem ser agendados.' : (this.value && this.value < hojeISO() ? 'Não é possível agendar em dias que já passaram.' : ''));
 };
+
+/* ---------- Google Agenda ---------- */
+let toastT;
+function aviso(t, ok){
+  const el = $('toast'); el.textContent = t; el.className = ok ? 'ok' : 'err'; el.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 5000);
+}
+function eventoDe(r){
+  const [ini, fim] = r.horario.split(' - ');
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // ID fixo por agendamento: evita duplicar o evento se clicar duas vezes
+  const hex = [...new TextEncoder().encode(r.id)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return {
+    id: 'sala' + hex,
+    summary: `Sala de vídeo: ${r.disciplina} (${r.turma})`,
+    description: `Professor(a): ${r.professor}`,
+    location: 'Sala de vídeo',
+    start: { dateTime: `${r.data}T${ini}:00`, timeZone: tz },
+    end: { dateTime: `${r.data}T${fim}:00`, timeZone: tz }
+  };
+}
+async function tokenAgenda(){
+  if (gToken) return gToken;
+  const p = new GoogleAuthProvider();
+  p.addScope('https://www.googleapis.com/auth/calendar.events');
+  p.setCustomParameters({ login_hint: user.email });
+  const res = await signInWithPopup(auth, p);
+  const cred = GoogleAuthProvider.credentialFromResult(res);
+  gToken = cred ? cred.accessToken : null;
+  return gToken;
+}
+async function addAgenda(id){
+  const r = lista.find(x => x.id === id); if (!r) return;
+  try {
+    const t = await tokenAgenda();
+    if (!t) return aviso('Não foi possível obter a permissão da Google Agenda.');
+    const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+      body: JSON.stringify(eventoDe(r))
+    });
+    if (resp.status === 401) { gToken = null; return aviso('A permissão expirou. Clique em 📅 novamente.'); }
+    if (resp.status === 409) return aviso('Este agendamento já está na sua Google Agenda.', true);
+    if (!resp.ok) { const e = await resp.json().catch(() => ({})); return aviso('Google Agenda: ' + ((e.error && e.error.message) || resp.status)); }
+    aviso('Adicionado à sua Google Agenda. ✅', true);
+  } catch (e) {
+    aviso(e.code === 'auth/popup-closed-by-user' ? 'Permissão cancelada.' : 'Erro: ' + (e.message || e.code));
+  }
+}
 
 /* ---------- Planilha ---------- */
 function render(){
@@ -143,14 +197,14 @@ function render(){
     html += '<tr>';
     for (let i = 0; i < 7; i++) {
       const d = new Date(w.getFullYear(), w.getMonth(), w.getDate() + i), k = iso(d), fds = i >= 5;
-      const cls = [d.getMonth() !== m ? 'other-month' : '', k === hoje ? 'today' : '', fds ? 'weekend' : ''].join(' ');
+      const cls = [d.getMonth() !== m ? 'other-month' : '', k === hoje ? 'today' : '', k < hoje ? 'past' : '', fds ? 'weekend' : ''].join(' ');
       const evs = lista.filter(r => r.data === k).sort((a,b) => a.horario.localeCompare(b.horario));
       html += `<td class="${cls}"${fds ? ' title="Sábado e domingo não podem ser agendados"' : ` data-d="${k}"`}><span class="daynum">${d.getDate()}</span>` +
         evs.map(r => {
           const ed = canEdit(r);
           return `<div class="agenda-item turno-${esc(r.turno)}${ed ? ' can-edit' : ''}"${ed ? ` data-edit="${r.id}" title="Clique para editar"` : ''}>` +
             `<b>${esc(r.horario)}</b>${esc(r.professor)}<br>${esc(r.disciplina)} · ${esc(r.turma)}` +
-            `<div class="actions">${ed ? `<button type="button" data-edit="${r.id}" aria-label="Editar">✏️</button>` : ''}` +
+            `<div class="actions"><button type="button" data-cal="${r.id}" aria-label="Adicionar à minha Google Agenda" title="Adicionar à minha Google Agenda">📅</button>${ed ? `<button type="button" data-edit="${r.id}" aria-label="Editar">✏️</button>` : ''}` +
             `${isAdmin() ? `<button type="button" data-del="${r.id}" aria-label="Excluir">🗑️</button>` : ''}</div></div>`;
         }).join('') + '</td>';
     }
@@ -161,10 +215,12 @@ function render(){
 $('prevMonth').onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
 $('nextMonth').onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
 $('calBody').addEventListener('click', e => {
+  const cal = e.target.closest('[data-cal]'); if (cal) return addAgenda(cal.dataset.cal);
   const del = e.target.closest('[data-del]'); if (del) return excluir(del.dataset.del);
   const ed = e.target.closest('[data-edit]'); if (ed) return editar(ed.dataset.edit);
   const td = e.target.closest('td');
   if (td && td.classList.contains('weekend')) return msg('Sábado e domingo não podem ser agendados.');
+  if (td && td.classList.contains('past')) return isAdmin() ? aviso('Não é possível agendar em dias que já passaram.') : undefined;
   if (td && td.dataset.d && isAdmin()) { $('data').value = td.dataset.d; $('professor').focus(); }
 });
 
